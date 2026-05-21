@@ -1,0 +1,16 @@
+# Ignore nested git metadata
+**/.git
+
+# Python cache and environments
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*~
+
+# Local environment files
+.env
+*.env
+
+# Project-specific ignores
+chess_arena/venv/

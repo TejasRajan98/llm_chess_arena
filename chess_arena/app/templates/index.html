@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Chess Arena</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="h-screen w-screen flex relative">
+
+    <!-- SIDEBAR BACKDROP -->
+    <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-stone-900/20 z-40 hidden opacity-0 transition-opacity duration-300"></div>
+
+    <!-- LEFT SIDEBAR (Hidden by default) -->
+    <aside id="sidebar" class="w-[260px] bg-[#fdfdfc] border-r border-[#e7e5e4] flex flex-col h-full fixed left-0 top-0 z-50 transform -translate-x-full transition-transform duration-300 shadow-2xl">
+        <div class="p-4 flex items-center justify-between">
+            <h1 class="text-xl font-serif-heading tracking-wide flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22h16"/><path d="M4 18h16"/><path d="M12 2v16"/><path d="M8 2v16"/><path d="M16 2v16"/><path d="M3 2h18"/></svg>
+                Arena
+            </h1>
+            <button onclick="toggleSidebar()" class="text-stone-400 hover:text-stone-600">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+        </div>
+        
+        <nav class="px-3 flex flex-col gap-1 mt-2">
+            <div onclick="showLanding(); toggleSidebar();" class="nav-item active" id="nav-new">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+                New Game
+            </div>
+            <div onclick="showLeaderboard(); toggleSidebar();" class="nav-item" id="nav-leaderboard">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                Leaderboard
+            </div>
+        </nav>
+        
+        <div class="px-5 mt-8 mb-2 text-xs font-medium text-stone-400">Recent Matches</div>
+        <div class="flex-1 overflow-y-auto px-3 space-y-1">
+            <div class="text-sm text-stone-600 truncate py-1.5 px-2 hover:bg-stone-100 rounded cursor-pointer">⚔️ Played Gemini Flash...</div>
+            <div class="text-sm text-stone-600 truncate py-1.5 px-2 hover:bg-stone-100 rounded cursor-pointer">🧠 Learn: Sicilian Def...</div>
+        </div>
+
+        <div class="p-4 border-t border-stone-200 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-stone-800 text-white flex items-center justify-center text-sm shadow-inner">U</div>
+            <div class="flex flex-col">
+                <span class="text-sm font-medium truncate text-stone-800">user@chessarena.ai</span>
+                <span class="text-xs text-stone-500 font-medium bg-stone-100 w-max px-2 py-0.5 rounded mt-0.5 border border-stone-200">Elo: 1420</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="flex-1 flex flex-col relative w-full bg-[#fdfdfc] bg-dots">
+        
+        <!-- TOP CONTROLS -->
+        <div class="absolute top-4 left-4 right-4 flex justify-between items-start z-30 pointer-events-none">
+            <div class="flex items-center gap-2 pointer-events-auto">
+                <!-- Sidebar Toggle Notch -->
+                <button onclick="toggleSidebar()" class="p-1.5 hover:bg-stone-100 rounded-lg text-stone-600 transition-colors bg-white/80 backdrop-blur border border-stone-200 shadow-sm flex items-center justify-center">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+                </button>
+                
+                <!-- Mode Dropdown -->
+                <div class="relative">
+                    <button onclick="toggleDropdown()" id="modeDropdownBtn" class="flex items-center gap-2 px-3 py-1.5 hover:bg-stone-100 rounded-lg text-sm font-medium text-stone-600 transition-colors bg-white/80 backdrop-blur border border-stone-200 shadow-sm">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                        <span id="currentModeLabel">Anonymous Battle</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                    </button>
+                    <div id="modeDropdownMenu" class="hidden absolute top-full left-0 mt-1 w-72 bg-white border border-stone-200 rounded-xl shadow-lg p-1.5">
+                        <div onclick="selectMode('anonymous', 'Anonymous Battle')" class="dropdown-item">
+                            <div class="flex items-center gap-2 text-stone-800 font-medium text-sm">Anonymous Battle</div>
+                        </div>
+                        <div onclick="selectMode('battle', 'Direct Battle')" class="dropdown-item">
+                            <div class="flex items-center gap-2 text-stone-800 font-medium text-sm">Direct Battle</div>
+                        </div>
+                        <div onclick="selectMode('learn', 'Learn from AI')" class="dropdown-item">
+                            <div class="flex items-center gap-2 text-stone-800 font-medium text-sm">Learn from AI</div>
+                        </div>
+                        <div onclick="selectMode('spectate', 'Spectate Battle')" class="dropdown-item">
+                            <div class="flex items-center gap-2 text-stone-800 font-medium text-sm">Spectate Battle</div>
+                        </div>
+                        <div onclick="selectMode('random', 'Random State')" class="dropdown-item">
+                            <div class="flex items-center gap-2 text-stone-800 font-medium text-sm">Random State</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pointer-events-auto hidden md:flex items-center gap-3 px-4 py-2 bg-white border border-stone-200 rounded-full text-xs text-stone-600 shadow-sm">
+                <span>AI processing strictly via Gemini 2.5 API</span>
+            </div>
+        </div>
+
+        <!-- VIEW 1: LANDING -->
+        <div id="view-landing" class="flex-1 flex flex-col items-center justify-center p-8 overflow-y-auto">
+            <h2 class="text-5xl md:text-6xl font-serif-heading text-stone-800 mb-8 text-center bg-white/50 px-6 py-2 rounded-2xl backdrop-blur-sm mt-10">Choose Your Arena</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-3xl relative z-10">
+                
+                <!-- Anonymous -->
+                <div onclick="selectMode('anonymous', 'Anonymous Battle')" class="bg-white/90 backdrop-blur-md border border-stone-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between group">
+                    <div>
+                        <div class="flex items-center gap-2 text-stone-800 font-medium mb-1">Anonymous Battle</div>
+                        <p class="text-xs text-stone-500 mb-4">Play against a hidden model. Guess who it is after the match.</p>
+                    </div>
+                    <div class="text-sm font-medium text-stone-400 group-hover:text-stone-800 transition-colors">Play Now →</div>
+                </div>
+
+                <!-- Direct Battle -->
+                <div class="bg-white/90 backdrop-blur-md border border-stone-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-2 text-stone-800 font-medium mb-1">Direct Battle</div>
+                        <p class="text-xs text-stone-500 mb-4">Choose a specific Gemini model to test your skills against.</p>
+                        
+                        <select id="direct-model-select" class="w-full text-sm border border-stone-200 rounded-lg px-3 py-2 bg-stone-50 mb-4 outline-none focus:border-stone-400">
+                            <option value="Gemini 2.5 Flash">Gemini 2.5 Flash</option>
+                            <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
+                            <option value="Gemini 1.5 Flash">Gemini 1.5 Flash</option>
+                        </select>
+                    </div>
+                    <button onclick="startDirectBattle()" class="w-full py-2 bg-stone-100 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors">Start Battle</button>
+                </div>
+
+                <!-- Spectate -->
+                <div class="bg-white/90 backdrop-blur-md border border-stone-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between md:col-span-2 lg:col-span-1">
+                    <div>
+                        <div class="flex items-center gap-2 text-stone-800 font-medium mb-1">Spectate Battle</div>
+                        <p class="text-xs text-stone-500 mb-4">Watch two LLMs battle it out in real-time.</p>
+                        
+                        <div class="flex items-center gap-2 mb-4">
+                            <select id="spectate-white" class="w-full text-sm border border-stone-200 rounded-lg px-2 py-2 bg-stone-50 outline-none focus:border-stone-400">
+                                <option>Gemini 2.5 Flash</option>
+                                <option>Gemini 1.5 Pro</option>
+                            </select>
+                            <span class="text-[10px] text-stone-400 font-bold uppercase">vs</span>
+                            <select id="spectate-black" class="w-full text-sm border border-stone-200 rounded-lg px-2 py-2 bg-stone-50 outline-none focus:border-stone-400">
+                                <option>Gemini 1.5 Pro</option>
+                                <option>Gemini 2.5 Flash</option>
+                            </select>
+                        </div>
+                    </div>
+                    <button onclick="startSpectateBattle()" class="w-full py-2 bg-stone-800 text-white rounded-lg text-sm font-medium hover:bg-stone-700 transition-colors shadow-sm">Launch Spectator Mode</button>
+                </div>
+
+                <!-- Learn / Random -->
+                <div class="flex flex-col gap-4 md:col-span-2 lg:col-span-1">
+                    <div onclick="selectMode('learn', 'Learn from AI')" class="bg-white/90 backdrop-blur-md border border-stone-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex-1">
+                        <div class="flex items-center gap-2 text-stone-800 font-medium mb-1">Learn from AI</div>
+                        <p class="text-xs text-stone-500">Play with real-time AI move suggestions and explanations.</p>
+                    </div>
+                    <div onclick="selectMode('random', 'Random State')" class="bg-white/90 backdrop-blur-md border border-stone-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all cursor-pointer group flex-1">
+                        <div class="flex items-center gap-2 text-stone-800 font-medium mb-1">Random Mid-Game</div>
+                        <p class="text-xs text-stone-500">Start from a chaotic randomized board setup against AI.</p>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <!-- VIEW 2: ARENA / GAME -->
+        <div id="view-arena" class="hidden flex-1 flex flex-col md:flex-row items-center justify-center gap-8 p-8 pt-20 h-full overflow-hidden relative z-10">
+            
+            <!-- Chessboard Side -->
+            <div class="flex flex-col items-center w-full max-w-[560px]">
+                
+                <!-- Opponent Info Bar -->
+                <div class="w-full flex justify-between items-end mb-3 px-1 text-sm text-stone-500 font-medium">
+                    <div class="flex items-center gap-2">
+                        <div id="opponent-name-container">
+                            <span id="opponent-name">Anonymous Model</span>
+                        </div>
+                        <span id="ai-thinking-indicator" class="hidden text-xs text-stone-400">Thinking<span class="thinking-dot">.</span><span class="thinking-dot">.</span><span class="thinking-dot">.</span></span>
+                    </div>
+                    <span id="top-color-badge" class="px-2 py-0.5 bg-stone-100 rounded text-xs border border-stone-200">Black</span>
+                </div>
+
+                <div id="canvas-container">
+                    <canvas id="chessCanvas"></canvas>
+                </div>
+                
+                <!-- Player Info Bar -->
+                <div class="w-full flex justify-between items-start mt-3 px-1 text-sm text-stone-800 font-medium">
+                    <div class="flex items-center gap-2">
+                        <div id="player-icon" class="w-5 h-5 rounded-full bg-stone-800 text-white flex items-center justify-center text-[10px]">U</div>
+                        <div id="player-name-container">
+                            <span id="player-name">You</span>
+                        </div>
+                    </div>
+                    <div class="text-xs text-stone-500 flex gap-2" id="player-controls">
+                        <button onclick="triggerAIMove()" id="btn-action" class="hover:text-stone-800 underline underline-offset-2 hidden">Next AI Move</button>
+                        <button onclick="startGame()" id="btn-resign" class="hover:text-red-600 underline underline-offset-2">Resign</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chatbot Panel (Learn Mode) -->
+            <div id="learn-chat-panel" class="hidden w-[380px] h-[560px] bg-white border border-stone-200 rounded-2xl shadow-sm flex-col">
+                <div class="p-4 border-b border-stone-100 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <div class="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-600">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                        </div>
+                        <span class="font-medium text-stone-800 text-sm">Gemini Coach</span>
+                    </div>
+                    <button onclick="askCoachForHint()" class="px-3 py-1 bg-stone-800 text-white text-xs rounded-full hover:bg-stone-700 transition-colors">Ask for Hint</button>
+                </div>
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                    <div class="chat-bubble chat-ai">
+                        Hello! I am your AI Coach powered by Gemini. Make a move, or click "Ask for Hint" if you are stuck!
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- VIEW 3: LEADERBOARD -->
+        <div id="view-leaderboard" class="hidden flex-1 overflow-y-auto p-12 pt-24 items-start justify-center">
+            <div class="w-full max-w-4xl mx-auto">
+                <h2 class="text-4xl font-serif-heading text-stone-800 mb-2">Arena Leaderboard</h2>
+                
+                <div class="bg-white border border-stone-200 rounded-xl overflow-hidden shadow-sm mt-8">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-stone-50 border-b border-stone-200 text-stone-600">
+                            <tr>
+                                <th class="px-6 py-3 font-medium">Rank</th>
+                                <th class="px-6 py-3 font-medium">Model</th>
+                                <th class="px-6 py-3 font-medium">Elo Rating</th>
+                                <th class="px-6 py-3 font-medium">Win Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-stone-100">
+                            <tr class="hover:bg-stone-50"><td class="px-6 py-4">#1</td><td class="px-6 py-4">Gemini 2.5 Flash</td><td class="px-6 py-4">2850</td><td class="px-6 py-4">71%</td></tr>
+                            <tr class="hover:bg-stone-50"><td class="px-6 py-4">#2</td><td class="px-6 py-4">Gemini 1.5 Pro</td><td class="px-6 py-4">2750</td><td class="px-6 py-4">64%</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script src="/static/js/main.js"></script>
+</body>
+</html>

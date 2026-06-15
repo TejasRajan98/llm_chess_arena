@@ -12,9 +12,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=1.0.1">
 </head>
-<body class="h-screen w-screen flex relative">
+<body class="w-full relative">
 
     <!-- SIDEBAR BACKDROP -->
     <div id="sidebar-backdrop" onclick="toggleSidebar()" class="fixed inset-0 bg-stone-900/20 z-40 hidden opacity-0 transition-opacity duration-300"></div>
@@ -48,6 +48,25 @@
             <div class="text-sm text-stone-600 truncate py-1.5 px-2 hover:bg-stone-100 rounded cursor-pointer">🧠 Learn: Sicilian Def...</div>
         </div>
 
+        <div class="px-5 mt-6 mb-2 text-xs font-medium text-stone-400 flex justify-between items-center select-none">
+            <span>Settings</span>
+            <span id="key-status-badge" class="text-[9px] px-1.5 py-0.25 rounded-full bg-stone-200 text-stone-600 font-semibold">Not Set</span>
+        </div>
+        <div class="px-5 mb-6">
+            <div class="flex flex-col gap-1.5">
+                <label for="user-api-key" class="text-[10px] text-stone-500 font-medium">Gemini API Key</label>
+                <div class="relative flex items-center w-full">
+                    <input type="password" id="user-api-key" oninput="saveUserKey(this.value)" placeholder="AIzaSy..." class="w-full text-xs border border-stone-200 rounded-lg pl-3 pr-8 py-2 bg-stone-50 outline-none focus:border-stone-400 font-mono transition-colors">
+                    <button onclick="toggleKeyVisibility()" class="absolute right-2 text-stone-400 hover:text-stone-600 focus:outline-none flex items-center justify-center">
+                        <svg id="eye-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+                        </svg>
+                    </button>
+                </div>
+                <span class="text-[9px] text-stone-400 leading-normal">Stored locally in your browser. Bypasses backend delays.</span>
+            </div>
+        </div>
+
         <div class="p-4 border-t border-stone-200 flex items-center gap-3">
             <div class="w-10 h-10 rounded-full bg-stone-800 text-white flex items-center justify-center text-sm shadow-inner">U</div>
             <div class="flex flex-col">
@@ -58,7 +77,7 @@
     </aside>
 
     <!-- MAIN CONTENT -->
-    <main class="flex-1 flex flex-col relative w-full bg-[#fdfdfc] bg-dots">
+    <main class="w-full min-h-screen md:h-full md:flex-1 flex flex-col relative bg-[#fdfdfc] bg-dots">
         
         <!-- TOP CONTROLS -->
         <div class="absolute top-4 left-4 right-4 flex justify-between items-start z-30 pointer-events-none">
@@ -125,6 +144,8 @@
                             <option value="Gemini 2.5 Flash">Gemini 2.5 Flash</option>
                             <option value="Gemini 1.5 Pro">Gemini 1.5 Pro</option>
                             <option value="Gemini 1.5 Flash">Gemini 1.5 Flash</option>
+                            <option value="Stockfish">Stockfish</option>
+                            <option value="Local Minimax">Local Minimax</option>
                         </select>
                     </div>
                     <button onclick="startDirectBattle()" class="w-full py-2 bg-stone-100 text-stone-700 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors">Start Battle</button>
@@ -140,11 +161,15 @@
                             <select id="spectate-white" class="w-full text-sm border border-stone-200 rounded-lg px-2 py-2 bg-stone-50 outline-none focus:border-stone-400">
                                 <option>Gemini 2.5 Flash</option>
                                 <option>Gemini 1.5 Pro</option>
+                                <option>Stockfish</option>
+                                <option>Local Minimax</option>
                             </select>
                             <span class="text-[10px] text-stone-400 font-bold uppercase">vs</span>
                             <select id="spectate-black" class="w-full text-sm border border-stone-200 rounded-lg px-2 py-2 bg-stone-50 outline-none focus:border-stone-400">
                                 <option>Gemini 1.5 Pro</option>
                                 <option>Gemini 2.5 Flash</option>
+                                <option>Stockfish</option>
+                                <option>Local Minimax</option>
                             </select>
                         </div>
                     </div>
@@ -167,24 +192,66 @@
         </div>
 
         <!-- VIEW 2: ARENA / GAME -->
-        <div id="view-arena" class="hidden flex-1 flex flex-col md:flex-row items-center justify-center gap-8 p-8 pt-20 h-full overflow-hidden relative z-10">
+        <div id="view-arena" class="hidden flex-1 flex flex-col md:flex-row items-center justify-start md:justify-center gap-8 p-4 md:p-6 pt-14 md:pt-16 h-auto md:h-full overflow-visible md:overflow-hidden relative z-10">
             
             <!-- Chessboard Side -->
-            <div class="flex flex-col items-center w-full max-w-[560px]">
+            <div class="flex flex-col items-center w-full max-w-[560px] flex-shrink-0">
                 
                 <!-- Opponent Info Bar -->
-                <div class="w-full flex justify-between items-end mb-3 px-1 text-sm text-stone-500 font-medium">
+                <div class="w-full flex justify-between items-center mb-3 px-1 text-sm text-stone-800 font-medium">
                     <div class="flex items-center gap-2">
+                        <div class="w-5 h-5 rounded-full bg-stone-100 border border-stone-200 text-stone-600 flex items-center justify-center text-[10px]">AI</div>
                         <div id="opponent-name-container">
                             <span id="opponent-name">Anonymous Model</span>
                         </div>
-                        <span id="ai-thinking-indicator" class="hidden text-xs text-stone-400">Thinking<span class="thinking-dot">.</span><span class="thinking-dot">.</span><span class="thinking-dot">.</span></span>
+                        <span id="opponent-score-diff" class="text-[10px] bg-stone-100 text-stone-400 font-medium px-1.5 py-0.25 rounded-md">0</span>
                     </div>
                     <span id="top-color-badge" class="px-2 py-0.5 bg-stone-100 rounded text-xs border border-stone-200">Black</span>
                 </div>
 
-                <div id="canvas-container">
-                    <canvas id="chessCanvas"></canvas>
+                <!-- Board Layout with Eval Bar -->
+                <div id="board-layout">
+                    <!-- Vertical Eval Bar -->
+                    <div id="eval-bar-container" style="display: none;">
+                        <div id="eval-bar-white" style="height: 50%;"></div>
+                        <span id="eval-score-text" class="eval-score-text" style="top: 6px;">0.0</span>
+                    </div>
+                    <!-- Chessboard Container -->
+                    <div id="canvas-container" class="flex-1">
+                        <canvas id="chessCanvas"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Review / Navigation Bar -->
+                <div id="review-bar" class="w-full flex items-center justify-between mt-2.5 px-3 py-1.5 bg-stone-50 border border-stone-200 rounded-lg text-xs text-stone-600 font-medium transition-all duration-200">
+                    <div class="flex items-center gap-1.5 animate-fade-in">
+                        <span id="review-pulse" class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span id="review-status">Live Game</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <!-- Spectate Controls (only shown in spectate mode) -->
+                        <div id="spectate-controls" class="hidden items-center gap-2 border-r border-stone-200 pr-3">
+                            <button id="btn-next-ai" onclick="triggerAIMove()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded shadow-sm transition-colors select-none font-medium flex items-center gap-1">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                                Play Move
+                            </button>
+                            <button id="btn-autoplay" onclick="toggleAutoplay()" class="bg-stone-100 hover:bg-stone-200 text-stone-700 px-2 py-0.5 rounded border border-stone-300 transition-colors select-none font-medium flex items-center gap-1">
+                                <svg id="autoplay-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                                <span id="autoplay-text">Auto Play</span>
+                            </button>
+                        </div>
+                        <button id="btn-prev" onclick="navigateHistory(-1)" class="hover:bg-stone-200/60 disabled:opacity-40 disabled:pointer-events-none px-2 py-0.5 rounded transition-colors flex items-center gap-0.5 select-none font-medium text-stone-700">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                            Prev
+                        </button>
+                        <button id="btn-next" onclick="navigateHistory(1)" class="hover:bg-stone-200/60 disabled:opacity-40 disabled:pointer-events-none px-2 py-0.5 rounded transition-colors flex items-center gap-0.5 select-none font-medium text-stone-700">
+                            Next
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                        </button>
+                        <button id="btn-live" onclick="exitReviewMode()" class="bg-stone-800 hover:bg-stone-900 disabled:opacity-40 disabled:pointer-events-none text-white px-2 py-0.5 rounded shadow-sm transition-colors select-none font-medium">
+                            Live Game
+                        </button>
+                    </div>
                 </div>
                 
                 <!-- Player Info Bar -->
@@ -194,16 +261,17 @@
                         <div id="player-name-container">
                             <span id="player-name">You</span>
                         </div>
+                        <span id="player-score-diff" class="text-[10px] bg-stone-100 text-stone-400 font-medium px-1.5 py-0.25 rounded-md">0</span>
                     </div>
                     <div class="text-xs text-stone-500 flex gap-2" id="player-controls">
-                        <button onclick="triggerAIMove()" id="btn-action" class="hover:text-stone-800 underline underline-offset-2 hidden">Next AI Move</button>
-                        <button onclick="startGame()" id="btn-resign" class="hover:text-red-600 underline underline-offset-2">Resign</button>
+                        <button onclick="resignGame()" id="btn-resign" class="hover:text-red-600 underline underline-offset-2">Resign</button>
+                        <button id="btn-review" onclick="enterReviewPanelMode()" class="hidden hover:text-emerald-600 font-semibold text-emerald-600 underline underline-offset-2">Review Game</button>
                     </div>
                 </div>
             </div>
 
             <!-- Chatbot Panel (Learn Mode) -->
-            <div id="learn-chat-panel" class="hidden w-[380px] h-[560px] bg-white border border-stone-200 rounded-2xl shadow-sm flex-col">
+            <div id="learn-chat-panel" class="hidden w-full max-w-[380px] h-[500px] md:h-[560px] bg-white border border-stone-200 rounded-2xl shadow-sm flex-col overflow-hidden flex-shrink-0">
                 <div class="p-4 border-b border-stone-100 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <div class="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center text-stone-600">
@@ -213,9 +281,79 @@
                     </div>
                     <button onclick="askCoachForHint()" class="px-3 py-1 bg-stone-800 text-white text-xs rounded-full hover:bg-stone-700 transition-colors">Ask for Hint</button>
                 </div>
-                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-4 max-h-[360px] md:max-h-[480px]">
                     <div class="chat-bubble chat-ai">
                         Hello! I am your AI Coach powered by Gemini. Make a move, or click "Ask for Hint" if you are stuck!
+                    </div>
+                </div>
+            </div>
+
+            <!-- Review Panel -->
+            <div id="game-review-panel" class="hidden w-full max-w-[380px] h-[500px] md:h-[560px] bg-white border border-stone-200 rounded-2xl shadow-sm flex-col overflow-hidden flex-shrink-0 animate-fade-in">
+                <div class="p-4 border-b border-stone-100 flex items-center justify-between">
+                    <span class="font-medium text-stone-800 text-sm flex items-center gap-2 select-none">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                        Game Review
+                    </span>
+                    <button id="btn-start-analysis" onclick="startGameAnalysis()" class="px-3 py-1 bg-emerald-600 text-white text-xs rounded-full hover:bg-emerald-700 transition-colors font-semibold shadow-sm select-none">Analyze Game</button>
+                </div>
+                <div id="review-panel-content" class="flex-1 flex flex-col overflow-hidden p-4 min-h-0">
+                    <!-- Progress view -->
+                    <div id="analysis-progress-container" class="hidden flex flex-col items-center justify-center flex-1 gap-3">
+                        <span class="text-xs text-stone-500 font-medium animate-pulse" id="analysis-progress-text">Analyzing positions...</span>
+                        <div class="w-48 h-1.5 bg-stone-100 rounded-full overflow-hidden border border-stone-200">
+                            <div id="analysis-progress-bar" class="h-full bg-emerald-500 transition-all duration-200" style="width: 0%;"></div>
+                        </div>
+                    </div>
+                    <!-- Welcome view -->
+                    <div id="analysis-welcome" class="flex flex-col items-center justify-center text-center flex-1 py-8">
+                        <div class="w-12 h-12 rounded-full bg-stone-50 border border-stone-150 flex items-center justify-center text-stone-400 mb-3">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                        </div>
+                        <h4 class="text-sm font-semibold text-stone-700 mb-1">Analyze Your Play</h4>
+                        <p class="text-xs text-stone-500 max-w-[240px] leading-relaxed">Run a full engine review of the game to see your accuracy, best moves, and blunders.</p>
+                    </div>
+                    <!-- Results view -->
+                    <div id="analysis-results" class="hidden flex-col gap-3 flex-1 overflow-hidden min-h-0">
+                        <!-- Summary Cards -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-stone-50 border border-stone-200/60 rounded-xl p-3 flex flex-col items-center justify-center">
+                                <span class="text-[9px] font-bold text-stone-400 uppercase tracking-wider">White Accuracy</span>
+                                <span id="white-accuracy" class="text-xl font-bold text-stone-850 mt-1">--%</span>
+                            </div>
+                            <div class="bg-stone-50 border border-stone-200/60 rounded-xl p-3 flex flex-col items-center justify-center">
+                                <span class="text-[9px] font-bold text-stone-400 uppercase tracking-wider">Black Accuracy</span>
+                                <span id="black-accuracy" class="text-xl font-bold text-stone-850 mt-1">--%</span>
+                            </div>
+                        </div>
+                        <!-- Move Quality Section (Collapsible) -->
+                        <div class="flex flex-col gap-1">
+                            <button onclick="toggleAnalysisTable()" class="flex justify-between items-center px-1.5 py-1 text-[9px] font-bold text-stone-400 uppercase tracking-wider hover:text-stone-600 transition-colors select-none">
+                                <span>Move Classification</span>
+                                <span id="analysis-table-toggle-icon" class="text-[10px] font-bold">＋</span>
+                            </button>
+                            <div id="analysis-table-wrapper" class="hidden border border-stone-200 rounded-xl overflow-hidden bg-white text-xs max-h-[160px] overflow-y-auto">
+                                <table class="w-full text-left">
+                                    <thead class="bg-stone-50 border-b border-stone-200 text-stone-400 font-bold text-[9px] uppercase tracking-wider">
+                                        <tr>
+                                            <th class="px-3 py-1.5">Category</th>
+                                            <th class="px-3 py-1.5 text-center">White</th>
+                                            <th class="px-3 py-1.5 text-center">Black</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-stone-100 font-medium text-stone-700" id="analysis-table-body">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <!-- Move list -->
+                        <div class="flex flex-col gap-1.5 flex-1 min-h-0 overflow-hidden">
+                            <span class="text-[9px] font-bold text-stone-400 uppercase tracking-wider px-1">Move Analysis</span>
+                            <div id="analysis-move-list" class="flex-1 overflow-y-auto border border-stone-200 rounded-xl p-2 bg-stone-50/20 divide-y divide-stone-100 relative max-h-[220px] md:max-h-[320px]">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -248,6 +386,6 @@
 
     </main>
 
-    <script src="/static/js/main.js"></script>
+    <script src="/static/js/main.js?v=1.0.1"></script>
 </body>
 </html>
